@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Try in AR - SweetAR Treats</title>
+  <link rel="stylesheet" href="styles/style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+        "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #fff0f5;
+    }
+
+    header {
+      background-color: #ff69b4;
+      padding: 1rem;
+      text-align: center;
+      color: white;
+    }
+
+    nav a {
+      margin: 0 1rem;
+      text-decoration: none;
+      color: white;
+      font-weight: bold;
+    }
+
+    main {
+      padding: 2rem;
+      text-align: center;
+    }
+
+    button {
+      margin: 1rem;
+      padding: 0.9rem 2rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 30px;
+      background-color: #ff69b4;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      transition: background-color 0.3s ease;
+      z-index: 1001;
+    }
+
+    button:hover {
+      background-color: #d94088;
+    }
+
+    #ar-container {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 999;
+      background-color: black;
+      pointer-events: auto;
+    }
+
+    #marker-section img {
+      width: 300px;
+      border: 4px dashed #a83279;
+      border-radius: 12px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    #exit-btn-fixed {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      padding: 10px 15px;
+      background-color: #ff69b4;
+      border-radius: 20px;
+      font-size: 14px;
+      z-index: 1002;
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>SweetAR Treats</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="products.html">Products</a>
+      <a href="try-ar.html">Try in AR</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="marker-section">
+      <h2>Scan This Marker To Try AR 🍩</h2>
+      <img src="./assets/marker/donut-marker.jpg" alt="Donut Marker" />
+      <br />
+      <a href="./assets/marker/donut.jpg" download>
+        <button>Download Marker</button>
+      </a>
+    </section>
+
+    <button id="start-ar-btn">✨ Start AR Experience</button>
+    <button id="stop-ar-btn" class="hidden">❌ Exit AR</button>
+    <button id="resize-ar-btn" class="hidden">🔍 Toggle Size</button>
+    <button id="exit-btn-fixed">Exit</button>
+
+    <div id="ar-container"></div>
+  </main>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { MindARThree } from 'mindar-image-three';
+
+    const startBtn = document.getElementById('start-ar-btn');
+    const stopBtn = document.getElementById('stop-ar-btn');
+    const resizeBtn = document.getElementById('resize-ar-btn');
+    const exitFixedBtn = document.getElementById('exit-btn-fixed');
+    const arContainer = document.getElementById('ar-container');
+    const markerSection = document.getElementById('marker-section');
+
+    let mindarThree, renderer, scene, camera, anchor;
+    let isFullscreen = true;
+
+    startBtn.addEventListener('click', async () => {
+      startBtn.classList.add('hidden');
+      stopBtn.classList.remove('hidden');
+      resizeBtn.classList.remove('hidden');
+      exitFixedBtn.style.display = 'block';
+      markerSection.classList.add('hidden');
+      arContainer.style.display = 'block';
+
+      mindarThree = new MindARThree({
+        container: arContainer,
+        imageTargetSrc: "./assets/marker/donut.mind",
+      });
+
+      ({ renderer, scene, camera } = mindarThree);
+      anchor = mindarThree.addAnchor(0);
+
+      const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+      scene.add(light);
+
+      const loader = new GLTFLoader();
+      loader.load('./assets/models/chocolate.glb', (gltf) => {
+        const model = gltf.scene;
+        model.scale.set(0.5, 0.5, 0.5);
+        anchor.group.add(model);
+      });
+
+      await mindarThree.start();
+
+      renderer.setAnimationLoop(() => {
+        renderer.render(scene, camera);
+      });
+    });
+
+    async function stopAR() {
+      if (mindarThree) {
+        renderer.setAnimationLoop(null);
+        await mindarThree.stop();
+        renderer.dispose();
+        mindarThree = null;
+      }
+
+      // Clean up all MindAR artifacts
+      document.querySelectorAll('.mindar-ui-overlay, .mindar-ui-scanner, .mindar-ui-loading').forEach(el => el.remove());
+
+      // Also clear inside the container
+      arContainer.innerHTML = '';
+
+      arContainer.style.display = 'none';
+      stopBtn.classList.add('hidden');
+      resizeBtn.classList.add('hidden');
+      exitFixedBtn.style.display = 'none';
+      startBtn.classList.remove('hidden');
+      markerSection.classList.remove('hidden');
+    }
+
+    stopBtn.addEventListener('click', stopAR);
+    exitFixedBtn.addEventListener('click', stopAR);
+
+    resizeBtn.addEventListener('click', () => {
+      if (isFullscreen) {
+        arContainer.style.width = '80vw';
+        arContainer.style.height = '60vh';
+        arContainer.style.top = '10vh';
+        arContainer.style.left = '10vw';
+      } else {
+        arContainer.style.width = '100vw';
+        arContainer.style.height = '100vh';
+        arContainer.style.top = '0';
+        arContainer.style.left = '0';
+      }
+      isFullscreen = !isFullscreen;
+    });
+  </script>
+</body>
+</html>

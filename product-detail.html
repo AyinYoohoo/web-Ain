@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dessert Details</title>
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <link rel="stylesheet" href="styles/style.css">
+</head>
+<body>
+  <header>
+    <h1>Dessert Detail</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="products.html">Products</a>
+      <a href="try-ar.html">Try in AR</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </header>
+  <main>
+    <h2>Ain Donut 3D View</h2>
+    <model-viewer src="assets/models/dessert_model.glb" alt="Strawberry Cheesecake" auto-rotate camera-controls ar></model-viewer>
+    <audio controls>
+      <source src="assets/audio/dessert_audio.mp3" type="audio/mp3">
+    </audio>
+  </main>
+
+  <main>
+    <h2>Donut Strawberry 3D View</h2>
+    <model-viewer src="assets/models/chocolate.glb" alt="Chocolate Lava Cake" auto-rotate camera-controls ar></model-viewer>
+    <audio controls>
+      <source src="assets/audio/dessert_audio.mp3" type="audio/mp3">
+    </audio>
+  </main>
+</body>
+</html>

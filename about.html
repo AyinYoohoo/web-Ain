@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>About WhiplashAR Treats</title>
+  <link rel="stylesheet" href="styles/style.css" />
+
+  <style>
+    /* Quick styles for buttons and AR container */
+    #ar-container{
+      position:fixed; inset:0;
+      display:none;             /* hidden until “Start AR” */
+      background:#000;
+      z-index:9999;
+    }
+    #start-button,#exit-button{
+      cursor:pointer;
+      padding:10px 20px; margin:10px 5px;
+      font-size:16px; font-weight:600;
+    }
+    #exit-button{
+      display:none;
+      position:fixed; top:10px; right:10px; z-index:10000;
+    }
+    #instruction{max-width:600px;margin:20px auto;font-size:1.1rem;}
+  </style>
+</head>
+<body>
+<header>
+  <h1>About Us</h1>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="products.html">Products</a>
+    <a href="try-ar.html">Try in AR</a>
+    <a href="about.html">About</a>
+    <a href="contact.html">Contact</a>
+  </nav>
+</header>
+
+<main>
+  <h2>We Bake, You Explore!</h2>
+  <p>WhiplashAR Treats brings your favourite desserts to life with Augmented Reality. From cheesecake to lava cake, experience them before you order!</p>
+
+  <div id="instruction">
+    <p>
+      👉 Please <a href="assets/images/ads image.jpg" download>download this marker image</a>,
+      display/print it, then click <strong>Start AR</strong> and point your camera at the image
+      to watch the video.
+    </p>
+  </div>
+
+  <button id="start-button">Start AR</button>
+  <button id="exit-button">Exit AR</button>
+
+  <div id="ar-container"></div>
+</main>
+
+<!-- Dependencies: A-Frame & MindAR (bundled with THREE) -->
+<script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image-three.prod.js"></script>
+
+<script>
+/* ---------- DOM references ---------- */
+const startBtn  = document.getElementById('start-button');
+const exitBtn   = document.getElementById('exit-button');
+const arDiv     = document.getElementById('ar-container');
+
+/* ---------- runtime vars ---------- */
+let mindar, video, plane;
+
+/* ---------- helper to build AR once ---------- */
+async function buildAR() {
+
+  /* 1. MindAR setup */
+  mindar = new window.MINDAR.IMAGE.MindARThree({
+    container: arDiv,
+    imageTargetSrc: 'assets/targets/ads.mind',
+    uiScanning:  true,
+    uiLoading:  'no'
+  });
+  const {renderer, scene, camera} = mindar;
+
+  /* 2. Video element – but DO NOT play yet */
+  video = document.createElement('video');
+  video.src = 'assets/videos/ads.mp4';
+  video.crossOrigin = 'anonymous';
+  video.loop  = true;
+  video.muted = false;          // you want sound
+  video.playsInline = true;
+
+  /* Wait only for metadata so we know aspect-ratio – NO autoplay */
+  await new Promise(res => {
+    video.addEventListener('loadedmetadata', res, {once:true});
+  });
+
+  /* 3. Video texture + plane (hidden initially) */
+  const THREE = window.MINDAR.IMAGE.THREE;
+  const aspect = video.videoHeight / video.videoWidth || (204/480); // fallback ratio
+  const geometry = new THREE.PlaneGeometry(1, aspect);
+  const texture  = new THREE.VideoTexture(video);
+  const material = new THREE.MeshBasicMaterial({map:texture});
+  plane = new THREE.Mesh(geometry, material);
+  plane.visible = false;
+
+  /* 4. Anchor */
+  const anchor = mindar.addAnchor(0);
+  anchor.group.add(plane);
+
+  anchor.onTargetFound = () => {
+    plane.visible = true;
+    video.currentTime = 0;   // start from beginning (optional)
+    video.play();
+  };
+  anchor.onTargetLost = () => {
+    video.pause();
+    plane.visible = false;
+  };
+
+  /* 5. Start MindAR engine */
+  await mindar.start();
+  renderer.setAnimationLoop(() => renderer.render(scene, camera));
+}
+
+/* ---------- UI handlers ---------- */
+startBtn.addEventListener('click', async () => {
+  startBtn.style.display = 'none';
+  exitBtn.style.display  = 'inline-block';
+  arDiv.style.display    = 'block';
+
+  if (!mindar) await buildAR();  // build only once
+});
+
+exitBtn.addEventListener('click', async () => {
+  if (mindar) await mindar.stop();
+  if (video)  video.pause();
+  arDiv.style.display   = 'none';
+  exitBtn.style.display = 'none';
+  startBtn.style.display= 'inline-block';
+});
+</script>
+</body>
+</html>
